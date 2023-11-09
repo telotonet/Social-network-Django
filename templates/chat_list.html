@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="row justify-content-center">
+    <div class="col-md-5 text-dark" >
+      <h2 class="text-light">My Chats</h2>
+      {% for chat in chats %}
+      <a href="{{chat.get_absolute_url}}" class="text-decoration-none" >
+        <div class="mb-1" >
+          <div class="card" style="border-radius: 0;" >
+            <div class="card-body text-light" style="background-color: rgb(31,32,35);">
+              <span class="card-title">{{ chat }} {{ chat.unread_messages_count }} {{chat.latest_unread_message}}</span>
+              <h5 class="card-text"></h5>
+            </div>
+          </div>
+        </div>
+      </a>
+      {% empty %}
+        <div class="col">
+          <p>No chats found.</p>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}
+

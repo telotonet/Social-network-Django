@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+{% load static %}
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>My Chat App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" crossorigin="anonymous">
+    
+    <style>
+        body {
+            font-family:Verdana, Geneva, Tahoma, sans-serif;
+            background: rgb(49, 51, 56);
+            color: #fff;
+        }
+        
+        .navbar {
+            background-color: #191212;
+        }
+        
+        .navbar-brand {
+            color: #fff;
+            font-size: 24px;
+        }
+        
+        .navbar-nav .nav-link {
+            color: #fff;
+        }
+        
+        .container {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand mx-auto" href="#">{{ request.user.username }}</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'feed' %}">Новости</a>
+                    </li>
+                    {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'logout' %}">Выход</a>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">Вход</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'signup' %}">Регистрация</a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'profiles' %}">Профили</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'friends' %}">Друзья</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'chat_list' %}">Чаты</a>
+                    </li>
+                    
+                </ul>
+            </div>
+        </div>
+    </nav>
+    
+    
+    <div class="container">
+        {% block content %}
+        {% endblock %}
+    </div>
+    <div aria-live="polite" aria-atomic="true" class="position-relative">
+        <div class="toast-container" style="bottom: 50px; right: 50px; position: fixed;">
+            <div class="toast align-items-center bg-danger-subtle" id='liveToast' role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body text-dark" id="toastBody">
+                    </div>
+                    <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- МОДАЛЬНОЕ ОКНО ПОЛЬЗОВАТЕЛЕЙ -->
+    <div class="modal fade large backdrop" id="userModal" tabindex="-1" >
+        <div class="modal-dialog modal-dialog-centered" style="max-width:400px; max-height:900px;">
+            <div class="modal-content text-light border-secondary" style="background-color: rgb(35,36,40);">
+                <div class="modal-body rounded" style="background-color: rgb(31,32,35);">
+                    <div class="d-flex align-items-center">
+                        <strong>Loading...</strong>
+                        <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>  
+
+ 
+
+
+
+    <!-- <script src="{% static 'js/NotificationsSSE.js' %}" type="application/javascript"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.7.0.js" integrity="sha256-JlqSTELeR4TLqP0OG9dxM7yDPqX1ox/HfgiSLBj8+kM=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+    <script src="https://kit.fontawesome.com/9c2558a26b.js" crossorigin="anonymous"></script>
+    <script src="{% static 'js/Utils.js' %}"></script>
+    <script src="{% static 'js/FriendRequest.js' %}"></script>
+    <script src="{% static 'js/GetUserAjax.js' %}"></script>
+    <script src="{% static 'js/GetFriendListAjax.js' %}"></script>
+    <script src="{% static 'js/Like.js' %}"></script>
+    <script src="{% static 'js/GetPhoto.js' %}"></script>
+    <script>
+        const requestUserId = '{{request.user.pk}}'
+        var userCache = {}
+    </script>
+    {% block script %}
+    {% endblock %}
+</body>
+
+</html>

@@ -1,0 +1,497 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    #userlink:hover,
+    #userlink:hover .status-indicator{
+        transition: 0.23s;
+        background-color: rgb(35, 36, 40);
+        border-color: rgb(35, 36, 40);
+    }
+    .userlink-active {
+        background-color: rgb(35, 36, 40);
+        border: 2px solid white;
+    }
+    #chat-messages {
+        max-height: 60vh;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(61, 61, 61, 0.3) rgba(0, 0, 0, 0.1);
+    }
+
+    #chat-messages::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    #chat-messages::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.1);
+    }
+
+    #chat-messages::-webkit-scrollbar-thumb {
+        background-color: rgb(31,32,35);
+        border-radius: 10px;
+    }
+
+    #chat-messages::-webkit-scrollbar-thumb:hover {
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+    .avatar-placeholder {
+        background-color: #ccc;
+        position: relative;
+         /* Добавлено для позиционирования внутреннего элемента */
+    }
+    .avatar-placeholder,
+    .profile-photo{
+        width: 40px;
+        height: 40px;
+    }
+
+    .status-indicator {
+        transition: 0.3s;
+        width: 18px;
+        height: 18px;
+        position: absolute;
+        border-radius: 50%;
+        bottom: -2px; /* Расположение кружка ниже центра аватарки */
+        right: -4px; /* Центрирование кружка по горизонтали */
+        border: rgb(17, 18, 20) 3px solid;
+        background-color: rgb(83, 83, 83);
+    }
+    @keyframes modal-show {
+        from {
+            opacity: 0;
+            height: 400px;
+            width: 800px;
+            transform: translate(150px, 0px);
+        }
+        to {
+            opacity: 1;
+            height: 500px;
+            width: 900px;
+            transform: translate(0, 0);
+        }
+  }
+
+    .modal.fade .modal-dialog {
+        animation: modal-show 0.4s ease-out;
+    } 
+
+</style>
+<div class="container">
+    <div class="row">
+        <div class="col-md-3">
+            <div id="participant-list" class="card" style="background-color: transparent; ">
+                <div id="chat-header" class="card-header text-white" style="background-color: rgb(31,32,35);">
+                    <div id="chat-title" class="h5 text-center">
+                        Other chats
+                    </div>
+                </div>
+                <div class="card-body" style="padding: 0; background-color: rgb(43,45,49);">
+                    {% for chat in chats %}
+                    <a href="{% url 'chat_details' chat.id %}" class="h6 mb-0 text-decoration-none d-block" style="background-color: rgb(17, 18, 20);">
+                        <div id="userlink" class="card-body d-flex {% if chat.id == chat_id %} userlink-active {% endif %}" style="box-sizing: border-box;">
+                            <div class="text-white">
+                                <p class="mb-0 mt-1">{{ chat|truncatechars:27 }}</p>
+                                <p class="mb-0"><small id="{{participant.id}}_status_small" class="small text-white fw-light" style="font-size: 12px;"></small></p>
+                            </div>
+
+                        </div></a>
+
+                    {% endfor %}
+                </div>
+                
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div id="chat-container" class="card" style="height: 85vh; background-color: transparent;">
+                <div id="chat-header" class="card-header text-white" style="background-color: rgb(31,32,35);">
+                    <div id="chat-title" class="h4 text-center">
+                        Chat
+                    </div>
+                </div>
+                
+                {% autoescape off %}
+        <div id="chat-messages" class="card-body overflow-auto text-dark text-break" style="max-height: 85vh; background-color: rgb(43,45,49);">
+                    <!-- Сообщения будут вставляться здесь -->
+                </div>
+                {% endautoescape %}
+
+                <div id="chat-footer" class="card-footer bg-dark d-flex">
+                    <input type="text" id="message-input" class="form-control text-white" placeholder="Введите сообщение" style="background-color: rgb(56, 58, 64);">
+                    <button id="send-button" class="btn btn-primary ml-5" style="margin-left: 10px;">Отправить</button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div id="participant-list" class="card" style="background-color: transparent;">
+                <div id="chat-header" class="card-header text-white" style="background-color: rgb(31,32,35);">
+                    <div id="chat-title" class="h5 text-center">
+                        Chat members
+                    </div>
+                </div>
+                <div class="card-body overflow-auto" style="padding: 0; background-color: rgb(43,45,49); max-height:80vh;">
+                    <a class="h6 mb-0 text-decoration-none d-block" id="userData" data-bs-toggle="modal" data-bs-target="#modal" style="background-color: rgb(17, 18, 20);">
+                        {% for participant in participants %}
+                            <div id="userlink" type="usermodal" user-id="{{participant.id}}" class="card-body d-flex ">
+                                <div class="avatar-placeholder rounded-circle user-select-none">
+                                    <img id="{{participant.id}}_photo" style="object-fit:cover;" {% if participant.profile.photo %} 
+                                    src="{{ participant.profile.photo.url }}"  {% endif %} class="profile-photo rounded-circle">
+                                    <div id="{{participant.id}}_status" class="status-indicator"></div>
+                                </div>
+                                <div class="text-white w-100">
+                                    <p class="mb-0 mt-1" style="margin-left:10px">{{ participant.username|truncatechars:20 }}</p>
+                                    <p class="mb-0"><small id="{{participant.id}}_status_small" class="small text-white fw-light" style="font-size: 12px;"></small></p>
+                                </div>
+                                {% if participant == chat.creator and chat.participants.count > 2 %}
+                                <div>
+                                    <svg class='text-end mt-1' style="fill:orange" xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 576 512"><path d="M309 106c11.4-7 19-19.7 19-34c0-22.1-17.9-40-40-40s-40 17.9-40 40c0 14.4 7.6 27 19 34L209.7 220.6c-9.1 18.2-32.7 23.4-48.6 10.7L72 160c5-6.7 8-15 8-24c0-22.1-17.9-40-40-40S0 113.9 0 136s17.9 40 40 40c.2 0 .5 0 .7 0L86.4 427.4c5.5 30.4 32 52.6 63 52.6H426.6c30.9 0 57.4-22.1 63-52.6L535.3 176c.2 0 .5 0 .7 0c22.1 0 40-17.9 40-40s-17.9-40-40-40s-40 17.9-40 40c0 9 3 17.3 8 24l-89.1 71.3c-15.9 12.7-39.5 7.5-48.6-10.7L309 106z"/></svg>
+                                </div>
+                                {% endif %}
+
+                            </div>
+                        {% endfor %}
+                    </a>
+                    <div class="d-grid gap-2" >
+                        <button onclick="getFriendListAjax()" data-toggle="modal" data-target="#modalFriends" class="btn btn-outline-secondary" type="button"><svg xmlns="http://www.w3.org/2000/svg" style="fill:white" height="1.5em" viewBox="0 0 448 512"><path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32V224H48c-17.7 0-32 14.3-32 32s14.3 32 32 32H192V432c0 17.7 14.3 32 32 32s32-14.3 32-32V288H400c17.7 0 32-14.3 32-32s-14.3-32-32-32H256V80z"/></svg></button>
+                    </div>
+                    
+                    <!-- МОДАЛЬНОЕ ОКНО ДРУЗЕЙ -->
+                    <div class="modal fade backdrop" id="modalFriends" tabindex="-1" >
+                        <div class="modal-dialog modal-dialog-scrollable" style="max-width:400px; max-height:900px;">
+                            <div class="modal-content text-light border-secondary" style="background-color: rgb(12,12,12);">
+                                <div class="modal-header bg-black border-bottom border-secondary">
+                                    <p class="w-100 text-light text-center mb-0 font-monospace">Your friends</p>
+                                </div>
+                                <div class="modal-body rounded" id="modalFriendForCard">
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div> 
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
+{% block script %}
+
+<script>
+    const chatSocket = new WebSocket('ws://' + window.location.host + '/ws/chat/{{chat_id}}/');
+    chatSocket.onmessage = function(event) {
+        var data = JSON.parse(event.data);
+        var typing = data['typing']
+        var message = data['new_message']
+        var user_joined = data['user_joined']
+        var message_read = data['message_read']
+        if (user_joined){
+            $(".status-indicator").css("background-color", "rgb(83, 83, 83)").css('display','none');
+            $(".small").text('').css('display','none');
+            user_joined['connected_users'].forEach(function(el) {
+                $("#" + el + "_status").css('backgroundColor', 'rgb(35, 165, 90)').css('display','block');
+            });
+        }
+        if (message) {
+            user = JSON.parse(message['user']);
+            var sender_id = user.id;
+            var messageElement = document.createElement('div');
+            if ('{{request.user.id}}' == sender_id){
+                messageElement.classList.add('card', 'mb-2', 'bg-danger-subtle', 'w-60', 'float-end');
+                messageElement.style.marginLeft = '30%';
+                messageElement.style.minWidth = '30%';
+                messageElement.style.maxWidth = '80%';
+                new_el = `
+                    <div class="card-body justify-content-center" style="padding:8px 8px 8px 12px;">
+                        <p class="card-text" style="margin:0;">${ message.message }</p>
+                        <p class="card-text text-end text-muted fw-light" style="margin:0; padding:0px; line-height: 10px;"><small class='user-select-none' style='line-height: 10px;' id='${message.message_id}_is_read'></small><small class="text-muted user-select-none">${ message.timestamp }</small></p>
+                    </div>`
+                messageElement.innerHTML = new_el;
+                document.querySelector('#chat-messages').appendChild(messageElement);
+                var chatMessagesContainer = document.querySelector('#chat-messages');
+                chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+            } else {
+                messageElement.classList.add('card', 'mb-2', 'bg-info-subtle', 'w-60', 'float-start');
+                messageElement.style.marginRight = '30%';
+                messageElement.style.minWidth = '30%';
+                messageElement.style.maxWidth = '80%';
+                new_el = `
+                    <div class="card-body d-flex" style="padding:8px 8px 8px 12px;">
+                        <div class="d-flex align-items-center">
+                            <img src="${$('#' + sender_id + '_photo').attr('src')}" class="profile-photo rounded-circle" style="width: 40px; height: 40px;margin-right:12px">
+                        </div>
+                        <div class="">
+                            <p class="card-text" style="margin:0;">${message.message}</p>
+                            <p class="card-text text-end text-muted fw-light" style="margin:0; padding:0px; line-height: 10px;">
+                                <small class='user-select-none' style="line-height: 10px;" id="${message.message_id}_is_read"></small>
+                                <small class="text-muted user-select-none">${message.timestamp}</small>
+                            </p>
+                        </div>
+                    </div>`;
+                messageElement.innerHTML = new_el;
+                document.querySelector('#chat-messages').appendChild(messageElement);
+            };
+        }
+        if (message_read){
+            message_id = message_read['message_id']
+            $('#'+message_id+'_is_read').text('прочитано ');
+        }
+        if (typing){
+            typing_username = typing['username']
+            typing_user_id = typing['typing_user_id']
+            is_typing = typing['is_typing']
+            if (is_typing){
+                $('#' + typing_user_id + '_status').css('width', '30px').css('borderRadius', '10px')
+                typingElement = '<div class="spinner-grow bg-black position-relative" style="height:5px; width:5px; top:-9px; right:-4px;margin-right:1px" role="status"></div>'
+                for (var i = 0; i < 3; i++) {
+                    setTimeout(function() {
+                        $('#' + typing_user_id + '_status').append(typingElement);
+                    }, i * 200); // Умножаем индекс на 100, чтобы получить задержку в 0.1 секунды
+                }
+            } else {
+                $('#' + typing_user_id + '_status').css('width', '18px').empty()
+            }
+
+        }
+    };
+    chatSocket.onerror = function(error){
+        errorToast('Не удалось подключиться к серверу')
+        chatDisable()
+        console.error('WebSocket error: ', error);
+    }
+    chatSocket.onclose = function(event) {
+        errorToast('Соединение прервано')
+        chatDisable()
+        console.log(event)
+    };
+
+
+    document.querySelector('#send-button').addEventListener('click', function(event) {
+    event.preventDefault();
+    var messageInputDom = document.querySelector('#message-input');
+    var message = messageInputDom.value.trim(); // Удаляем пробелы с начала и конца сообщения
+    if (message !== '') { // Проверяем, что сообщение не пустое
+        sendMessage();
+        }
+    });
+
+    document.querySelector('#message-input').addEventListener('keydown', function(event) {
+    if (event.keyCode === 13) {
+        event.preventDefault();
+        var messageInputDom = document.querySelector('#message-input');
+        var message = messageInputDom.value.trim(); // Удаляем пробелы с начала и конца сообщения
+        if (message !== '') { // Проверяем, что сообщение не пустое
+            sendMessage();
+        }
+    }}
+    );
+
+    function sendMessage() {
+        var messageInputDom = document.querySelector('#message-input');
+        var message = messageInputDom.value;
+        chatSocket.send(JSON.stringify({
+            'message': message
+        }));
+        messageInputDom.value = '';
+    };
+
+
+    var currentPage = 1;
+    var hasMorePages = true;
+    var isLoading = false;
+    var cooldownTimeout = null; // Таймер кулдауна
+
+    $('#chat-messages').on('scroll', function() {
+        var container = $(this);
+        var scrollTop = container.scrollTop();
+
+        if (scrollTop === 0 && hasMorePages && !isLoading && !cooldownTimeout) {
+            container.stop()
+            currentPage += 1;
+            isLoading = true;
+            showLoadingAnimation(); // Отображение анимации загрузки
+
+            getChatMessages(currentPage);
+        }
+    });
+
+    // Функция для выполнения AJAX-запроса и обновления сообщений в чате
+    function getChatMessages(page) {
+        chatMessages = document.querySelector('#chat-messages')
+        var scrollTopBefore = chatMessages.scrollTop
+        $.ajax({
+            url: "{% url 'get_chat_messages' chat_id %}",
+            type: "GET",
+            dataType: "json",
+            data: {
+                page: page
+            },
+            success: function(data) {
+                var addedHeight = 0;
+                // Вставка полученных сообщений в блок
+                data.messages.forEach(function(message) {
+                    var newMessage = createMessageElement(message, page);
+                    $("#chat-messages").prepend(newMessage);
+                    addedHeight += $(newMessage).outerHeight(true);
+                });
+                if (page===1){
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+                chatMessages.scrollTop = scrollTopBefore + addedHeight;
+
+                hasMorePages = data.has_next;
+            },
+            error: function(xhr, status, error) {
+                errorToast(error +'. Не удалось получить данные')
+                isLoading = false;
+            },
+            complete: function(){
+                deleteLoadingAnimation(); // Отображение анимации загрузки
+                isLoading = false;
+
+                // Устанавливаем таймер кулдауна на 3 секунды
+                cooldownTimeout = setTimeout(function() {
+                    cooldownTimeout = null;
+                }, 700);
+            },
+        });
+    }
+
+    // Функция для создания HTML-элемента сообщения
+    function createMessageElement(message, page) {
+        var messageElement = document.createElement('div');
+        if ("{{request.user.id}}"==message.sender.id){
+            messageElement.classList.add('card', 'mb-2', 'bg-danger-subtle', 'w-60', 'float-end');
+            messageElement.style.marginLeft = '30%';
+        } else {
+            messageElement.classList.add('card', 'mb-2', 'bg-info-subtle', 'w-60', 'float-start');
+            messageElement.style.marginRight = '30%';
+        }
+        messageElement.style.minWidth = '30%';
+        messageElement.style.maxWidth = '80%';
+
+        var cardBodyElement = document.createElement('div');
+        cardBodyElement.classList.add('card-body', 'd-flex');
+        cardBodyElement.style.padding = '8px 8px 8px 12px';
+
+
+        if ("{{request.user.id}}"!=message.sender.id){
+            var avatarContainer = document.createElement('div');
+            avatarContainer.classList.add('d-flex', 'align-items-center', 'user-select-none');
+            var avatarImage = document.createElement('img');
+            avatarImage.src = message.sender.profile.photo;
+            avatarImage.classList.add('profile-photo', 'rounded-circle');
+            avatarImage.style.width = '40px';
+            avatarImage.style.height = '40px';
+            avatarImage.style.marginRight = '12px';
+            avatarContainer.appendChild(avatarImage);
+        }
+        var contentContainer = document.createElement('div');
+        var messageText = document.createElement('p');
+        messageText.classList.add('card-text');
+        messageText.style.margin = '0';
+        messageText.textContent = message.content;
+
+        var isReadElement = document.createElement('small');
+        isReadElement.classList.add('text-muted', 'user-select-none');
+        isReadElement.style.lineHeight = '10px';
+        isReadElement.id = message.id + '_is_read';
+        if (message.read_by!=null){
+            isReadElement.textContent = 'прочитано '
+        }
+        var timestampText = document.createElement('small');
+        timestampText.classList.add('text-muted', 'user-select-none');
+
+        timestampText.textContent = new Date(message.timestamp).toLocaleString('ru-RU', {hour: '2-digit', minute: '2-digit'});
+
+        var timestampContainer = document.createElement('p');
+        timestampContainer.classList.add('card-text', 'text-end', 'text-muted', 'fw-light');
+        timestampContainer.style.margin = '0';
+        timestampContainer.style.padding = '0px';
+        timestampContainer.style.lineHeight = '10px';
+        timestampContainer.appendChild(isReadElement);
+        timestampContainer.appendChild(timestampText);
+        contentContainer.appendChild(messageText);
+        contentContainer.appendChild(timestampContainer);
+        if ("{{request.user.id}}"!=message.sender.id){
+            cardBodyElement.appendChild(avatarContainer);
+        }
+        cardBodyElement.appendChild(contentContainer);
+        messageElement.appendChild(cardBodyElement);
+
+  return messageElement;
+}
+
+
+    // Вызов функции для выполнения AJAX-запроса и обновления сообщений в чате
+    getChatMessages(currentPage);
+
+    function showLoadingAnimation(content='') {
+        var loadingSpinner = $('<div>').addClass('d-flex ' + content + ' justify-content-center mb-3');
+        var spinner = $('<div>').addClass('spinner-border text-white').attr('role', 'status');
+        var loadingText = $('<span>').addClass('visually-hidden').text('Loading...');
+        spinner.append(loadingText);
+        loadingSpinner.append(spinner);
+        $('#chat-messages').prepend(loadingSpinner);
+    }
+
+    function deleteLoadingAnimation() {
+        $('#chat-messages .d-flex.justify-content-center').remove();
+    }
+
+    var messageInputDom = document.querySelector('#message-input');
+    var isTyping = false;
+    var typingTimeout = null;
+    var sendTypingInterval = 1000; // Интервал отправки события в миллисекундах
+
+    messageInputDom.addEventListener('input', function() {
+        clearTimeout(typingTimeout);
+
+        if (!isTyping) {
+            isTyping = true;
+            // Отправка события "начало набора сообщения" на сервер
+            chatSocket.send(JSON.stringify({
+                'typing': 'start_typing'
+            }));
+        }
+
+        typingTimeout = setTimeout(function() {
+            isTyping = false;
+            // Отправка события "конец набора сообщения" на сервер
+            chatSocket.send(JSON.stringify({
+                'typing': 'stop_typing'
+            }));
+        }, sendTypingInterval);
+    });
+
+    $(document).ready(function() {
+        var container = $("#chat-messages");
+
+        // Обработчик события прокрутки колесиком мыши
+        container.on("wheel", function(event) {
+            event.preventDefault();
+
+            // Определение направления прокрутки (вверх или вниз)
+            var delta = event.originalEvent.deltaY > 0 ? 1 : -1;
+
+            // Вычисление позиции прокрутки
+            var scrollTop = container.scrollTop() + (delta * 300);
+
+            // Прокрутка контейнера с плавной анимацией
+            container.stop().animate({
+                scrollTop: scrollTop
+            }, 250);
+        });
+    });
+
+
+    function chatDisable(){
+        chatFooterError = `<input type="text" id="message-input" class="form-control text-danger" disabled value="Обмен сообщениями недоступен." style="background-color: rgb(56, 58, 64);"><button class="btn btn-primary" style="margin-left: 10px; width:137px" type="button" disabled><span class="spinner-border spinner-border-sm" aria-hidden="true"></span><span class="visually-hidden">Loading...</span></button>`
+        document.querySelector('#chat-footer').innerHTML = chatFooterError
+    }
+
+</script>
+{% endblock %}

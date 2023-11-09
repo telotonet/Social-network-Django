@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% load static %}
+
+
+{% block content %}
+<style>
+  #textAreaBlog::placeholder{
+    color:rgb(133, 133, 133);
+  }
+
+</style>
+<div class="col-md-8 mx-auto">
+  <form id="create-post-form" method="post" action="{% url 'create_post' %}" enctype="multipart/form-data"> 
+    {% csrf_token %}
+    <div class="card mb-3" style="border: none; background-color: transparent;">
+      <div class="form-control d-flex p-3" style="background-color: rgb(34, 34, 34); border: none;  border-radius: 0px;">
+        <textarea placeholder="Что у вас нового?" name="content" id="textAreaBlog" class="form-control text-light" oninput="autoResize(this)" rows="1" style="background-color: rgb(34, 34, 34); border: none; resize: none; overflow: auto;"></textarea>
+        <div class="file-container">
+          <label for="file-input" class="file-icon" style="cursor: pointer;">
+            <div class="file-icon-content" style="padding-left: 13px">
+              <svg xmlns="http://www.w3.org/2000/svg" style="margin-top: 2px" height="2em" fill="rgb(83, 83, 83)" viewBox="0 0 512 512">
+                <path d="M149.1 64.8L138.7 96H64C28.7 96 0 124.7 0 160V416c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V160c0-35.3-28.7-64-64-64H373.3L362.9 64.8C356.4 45.2 338.1 32 317.4 32H194.6c-20.7 0-39 13.2-45.5 32.8zM256 192a96 96 0 1 1 0 192 96 96 0 1 1 0-192z"/>
+              </svg>
+            </div>
+          </label>
+          <input id="file-input" style="display:none;" name="photos" type="file" multiple>
+        </div>
+    </div>
+    <div id="uploaded-photos" class="flex-wrap" style="background-color: rgb(34, 34, 34);"></div>        
+    <button type="submit" class="btn text-light" style="background-color: rgb(34, 34, 34); border-radius: 0px;" >Отправить</button>
+
+  </form>
+  {% autoescape off %}
+  <div class="mt-4" id="feed">
+  {% for post in posts %}
+  <div class="card text-light user-select-none mb-4"  style="border-radius: 20px; border: 1px solid rgb(133, 133, 133); background-color: rgb(34, 34, 34);">
+    <div class="d-flex usermodal mb-2" style="cursor: pointer; padding: 25px 0px 0px 40px;" type="usermodal" user-id="{{post.author.id}}">
+        <div class="rounded-circle" style="{% if post.author.profile.photo %} background-image: url({{post.author.profile.photo.url}}); {% endif %} width:50px; height:50px; background-color: #ccc; background-size: cover;" alt=""></div>
+        <div class="d-block" style="margin-left: 20px; line-height: 5px; margin-top: 8px; font-size: 15px;">
+            <p>{{post.author.username}}</p>
+            <p class="text-secondary font-monospace">{{ post.created_at|date:"d.m.y H:i" }} {% if post.updated_at != post.created_at %} (ред.) {% endif %}</p>
+
+        </div>
+    </div>
+    <div class="card-body" href="{{post.get_absolute_url}}" style="padding: 0px 20px 15px 15px">
+      {% if post.content %}
+      <p class="card-text" style="padding-left:20px; padding-right:20px; font-size: 14px;">
+        {% with max_words=40 %}
+          {% with truncated_content=post.content|truncatewords:max_words %}
+              {{ truncated_content }}
+              {% if post.content|wordcount > max_words %}
+                  <a class="text-decoration-none" href="{{post.get_absolute_url}}">[Открыть запись]</a>
+              {% endif %}
+          {% endwith %}
+        {% endwith %}
+    </p>{% endif %}
+      {% if post.photos %}
+        <div class="row mt-4 flex-wrap d-flex justify-content-center align-items-center">
+          {% for photo in post.photos.all %}
+            {% if post.photos.count == 1 %}
+              <img class="img-fluid" loading="lazy" style="max-width: 800px; max-height: 600px; object-fit: contain;" src="{{ photo.image.url }}" alt="Photo">
+            {% elif post.photos.count == 2 %}
+            <div class="col-md-5">
+              <img class="img-thumbnail" loading="lazy" style="padding:0; border:none; width: 350px; height: 350px; object-fit: contain; background-color: rgb(24, 24, 24);" src="{{ photo.image.url }}" alt="Photo">
+            </div>
+            {% else %}
+              <div class="col-md-4 mb-4">
+                <img class="img-thumbnail" style="padding:0; border:none;" loading="lazy" src="{{ photo.image.url }}" alt="Photo">
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="mt-3 d-flex justify-content-between">
+        <div class="">
+          {% with post_obj=post %}
+            {% include 'utils/likes.html' with post=post_obj model_name='post' %}
+          {% endwith %}
+          <a type="button" href="{{post.get_absolute_url}}#comments" class="btn btn-dark rounded-pill d-inline" style="background-color: #3f3f3f; color:rgb(154, 152, 152); font-size: 14px;"><svg xmlns="http://www.w3.org/2000/svg" style="fill: rgb(154, 152, 152); margin-bottom: 3px;" height="1em" viewBox="0 0 512 512"><path d="M123.6 391.3c12.9-9.4 29.6-11.8 44.6-6.4c26.5 9.6 56.2 15.1 87.8 15.1c124.7 0 208-80.5 208-160s-83.3-160-208-160S48 160.5 48 240c0 32 12.4 62.8 35.7 89.2c8.6 9.7 12.8 22.5 11.8 35.5c-1.4 18.1-5.7 34.7-11.3 49.4c17-7.9 31.1-16.7 39.4-22.7zM21.2 431.9c1.8-2.7 3.5-5.4 5.1-8.1c10-16.6 19.5-38.4 21.4-62.9C17.7 326.8 0 285.1 0 240C0 125.1 114.6 32 256 32s256 93.1 256 208s-114.6 208-256 208c-37.1 0-72.3-6.4-104.1-17.9c-11.9 8.7-31.3 20.6-54.3 30.6c-15.1 6.6-32.3 12.6-50.1 16.1c-.8 .2-1.6 .3-2.4 .5c-4.4 .8-8.7 1.5-13.2 1.9c-.2 0-.5 .1-.7 .1c-5.1 .5-10.2 .8-15.3 .8c-6.5 0-12.3-3.9-14.8-9.9c-2.5-6-1.1-12.8 3.4-17.4c4.1-4.2 7.8-8.7 11.3-13.5c1.7-2.3 3.3-4.6 4.8-6.9c.1-.2 .2-.3 .3-.5z"/></svg>
+          {{post.comment_count}}
+          </a>
+
+        </div>
+        <div class="align-items-center" style="margin-right:17px">
+          <a href="{{post.get_absolute_url}}" class="btn btn-outline-primary text-light text-decoration-none" style="font-size: 12px;">Перейти к записи</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+</div>
+{% endautoescape %}
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'js/PostAjax.js' %}"></script>
+<script>
+  function autoResize(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+  }
+  document.getElementById('file-input').addEventListener('change', function() {
+  var files = this.files;
+  var uploadedPhotosContainer = document.getElementById('uploaded-photos');
+  
+  // Очищаем контейнер перед загрузкой новых фотографий
+  uploadedPhotosContainer.innerHTML = '';
+  
+  // Создаем элементы <img> для каждой загруженной фотографии
+  for (var i = 0; i < files.length; i++) {
+    var img = document.createElement('img');
+      img.src = URL.createObjectURL(files[i]);
+      img.style.maxWidth = '150px'; // Настройте стили по вашему усмотрению
+      img.style.maxHeight = '150px'; // Настройте стили по вашему усмотрению
+      img.style.padding = '5px 5px 5px 5px'; // Настройте стили по вашему усмотрению
+
+      
+      // Добавляем элемент <img> в контейнер для отображения
+      uploadedPhotosContainer.appendChild(img);
+    }
+  });
+</script>
+{% endblock %}
